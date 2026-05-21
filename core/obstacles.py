@@ -13,7 +13,7 @@ catches them and shows them via the QGIS message bar.
 from __future__ import annotations
 
 import logging
-from math import atan, atan2, cos, pi, radians, sin
+from math import atan, atan2, pi
 from typing import Any, Optional
 
 from qgis.core import (
@@ -29,32 +29,10 @@ from qgis.core import (
     QgsWkbTypes,
 )
 from ..utils.compat import FIELD_INT, FIELD_DOUBLE, FIELD_STRING, WKB_POLYGON_GEOM  # MIGA-01, MIGA-02
+from ._contour_utils import distance_along_axis as _distance_along_axis
+from ._contour_utils import ocs_elevation_at_distance as _ocs_elevation_at_distance
 
 logger = logging.getLogger("TOFPA.obstacles")
-
-
-# ---------------------------------------------------------------------------
-# Module-level helpers for 3-D OCS elevation computation  (BUG-B fix, C-1)
-# ---------------------------------------------------------------------------
-
-def _distance_along_axis(obstacle_pt, der_pt, azimuth_deg: float) -> float:
-    """Return the signed distance (metres) from *der_pt* to *obstacle_pt* projected
-    onto the takeoff axis defined by *azimuth_deg* (degrees, 0 = North)."""
-    az = radians(azimuth_deg)
-    dx = obstacle_pt.x() - der_pt.x()
-    dy = obstacle_pt.y() - der_pt.y()
-    return dx * sin(az) + dy * cos(az)
-
-
-def _ocs_elevation_at_distance(d: float, z_der: float, climb_gradient: float) -> float:
-    """Return the OCS surface elevation (MSL) at horizontal distance *d* from the DER.
-
-    Points behind the DER (d < 0) are evaluated at *z_der* — the surface does
-    not extend backwards.
-    """
-    if d < 0:
-        return z_der
-    return z_der + d * climb_gradient
 
 
 class ObstacleAnalyzer:

@@ -67,6 +67,7 @@ def generate_aixm_file(layers: list, file_path: str) -> None:
 
 def _add_surface(root: ET.Element, layer) -> None:
     """Add each feature of *layer* as an AIXM ``NavigationArea``."""
+    layer_crs = layer.crs()
     for feature in layer.getFeatures():
         fm = ET.SubElement(root, "gml:featureMember")
         nav_area = ET.SubElement(fm, "aixm:NavigationArea")
@@ -91,11 +92,12 @@ def _add_surface(root: ET.Element, layer) -> None:
 
         geom = feature.geometry()
         if geom and not geom.isEmpty():
-            _add_geometry(nav_ts, geom)
+            _add_geometry(nav_ts, geom, layer_crs)
 
 
 def _add_reference_line(root: ET.Element, layer) -> None:
     """Add each feature of *layer* as an AIXM ``Curve``."""
+    layer_crs = layer.crs()
     for feature in layer.getFeatures():
         fm = ET.SubElement(root, "gml:featureMember")
         curve = ET.SubElement(fm, "aixm:Curve")
@@ -104,21 +106,17 @@ def _add_reference_line(root: ET.Element, layer) -> None:
 
         geom = feature.geometry()
         if geom and not geom.isEmpty():
-            _add_geometry(curve, geom)
+            _add_geometry(curve, geom, layer_crs)
 
 
 # ---------------------------------------------------------------------------
 # Geometry helpers
 # ---------------------------------------------------------------------------
 
-def _add_geometry(parent: ET.Element, geometry) -> None:
-    """Transform *geometry* to WGS-84 and attach GML representation."""
+def _add_geometry(parent: ET.Element, geometry, layer_crs) -> None:
+    """Transform *geometry* to WGS-84 using *layer_crs* and attach GML."""
     crs_4326 = QgsCoordinateReferenceSystem("EPSG:4326")
-    transform = QgsCoordinateTransform(
-        geometry.crs() if hasattr(geometry, "crs") else QgsProject.instance().crs(),
-        crs_4326,
-        QgsProject.instance(),
-    )
+    transform = QgsCoordinateTransform(layer_crs, crs_4326, QgsProject.instance())
     geom_4326 = QgsGeometry(geometry)
     geom_4326.transform(transform)
 
@@ -132,7 +130,7 @@ def _add_gml_surface(parent: ET.Element, geometry) -> None:
     """Attach a ``gml:Surface`` (polygon) to *parent*."""
     wrapper = ET.SubElement(parent, "aixm:geometryComponent")
     surface = ET.SubElement(wrapper, "aixm:Surface")
-    surface.set("gml:id", f"srf_{hash(str(geometry.asWkt())) & 0x7FFFFFFF}")
+    surface.set("gml:id", f"srf_{uuid.uuid4().hex[:8]}")
     surface.set("srsName", "urn:ogc:def:crs:EPSG::4326")
     surface.set("srsDimension", "3")
 
@@ -160,7 +158,7 @@ def _add_gml_curve(parent: ET.Element, geometry) -> None:
     """Attach a ``gml:Curve`` (linestring) to *parent*."""
     wrapper = ET.SubElement(parent, "aixm:geometryComponent")
     curve = ET.SubElement(wrapper, "aixm:Curve")
-    curve.set("gml:id", f"crv_{hash(str(geometry.asWkt())) & 0x7FFFFFFF}")
+    curve.set("gml:id", f"crv_{uuid.uuid4().hex[:8]}")
     curve.set("srsName", "urn:ogc:def:crs:EPSG::4326")
     curve.set("srsDimension", "3")
 

@@ -27,6 +27,9 @@ from qgis.core import (QgsProject, QgsVectorLayer, QgsFeature, QgsGeometry,
 import logging
 import os.path
 
+# Module logger — must be defined before any try/except that uses it
+logger = logging.getLogger('TOFPA')
+
 # Import the dockwidget with error handling
 try:
     from .tofpa_dockwidget import TofpaDockWidget
@@ -38,9 +41,6 @@ except ImportError as e:
     plugin_dir = os.path.dirname(__file__)
     sys.path.insert(0, plugin_dir)
     from tofpa_dockwidget import TofpaDockWidget
-
-# Module logger
-logger = logging.getLogger('TOFPA')
 
 # Core modules — imported with relative/absolute fallback for QGIS plugin compatibility
 try:

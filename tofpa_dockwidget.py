@@ -99,7 +99,10 @@ class TofpaDockWidget(QDockWidget, FORM_CLASS):
         self.obstaclesLayerCombo.setExceptedLayerList([])
         
         # Apply geometry-specific filters
-        self._apply_geometry_filters()
+        try:
+            self._apply_geometry_filters()
+        except Exception:
+            logger.debug("Geometry filter application skipped (QGIS not ready)", exc_info=True)
         
         # Connect to layer changes to refresh filters and obstacle field combo
         try:
@@ -208,20 +211,21 @@ class TofpaDockWidget(QDockWidget, FORM_CLASS):
         """Update the obstacle height field combo box based on selected layer"""
         try:
             self.obstacleHeightFieldCombo.clear()
-            
+
             layer = self.obstaclesLayerCombo.currentLayer()
             if layer:
-                # Add numeric fields to the combo
+                # Build filtered list in one pass so the combo index matches exactly
+                numeric_field_names: list[str] = []
                 for field in layer.fields():
                     if field.type() in [FIELD_INT, FIELD_DOUBLE]:
                         self.obstacleHeightFieldCombo.addItem(field.name())
-                        
-                # Set default common field names if available
-                field_names = [field.name().lower() for field in layer.fields()]
+                        numeric_field_names.append(field.name().lower())
+
                 for default_name in ['height', 'elevation', 'elev', 'z', 'alt', 'altitude']:
-                    if default_name in field_names:
-                        index = field_names.index(default_name)
-                        self.obstacleHeightFieldCombo.setCurrentIndex(index)
+                    if default_name in numeric_field_names:
+                        self.obstacleHeightFieldCombo.setCurrentIndex(
+                            numeric_field_names.index(default_name)
+                        )
                         break
         except Exception:
             logger.debug("Obstacle height field update failed", exc_info=True)
@@ -243,7 +247,7 @@ class TofpaDockWidget(QDockWidget, FORM_CLASS):
             else:
                 self.endElevationSpin.setToolTip(
                     "Elevation at the Departure End of the Runway (ZE). "
-                    "The TOFPA OCS surface starts from this elevation and climbs at 1.2\u2009\u2014 ICAO Doc 8168 Vol I \u00a73.1.3."
+                    "The TOFPA OCS surface starts from this elevation and climbs at 1.2\u2009%\u2009\u2014 ICAO Doc 8168 Vol I \u00a73.1.3."
                 )
         except Exception:
             logger.debug("Elevation validation failed", exc_info=True)

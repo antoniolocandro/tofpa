@@ -17,7 +17,7 @@ All distances and elevations in metres.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from math import ceil, floor
+from math import ceil, floor, radians, sin, cos
 from typing import List
 
 
@@ -191,3 +191,27 @@ def contour_specs_for_takeoff(
             half_width=half_w,
         ))
     return specs
+
+
+# ---------------------------------------------------------------------------
+# 3-D OCS penetration helpers — pure math, no QGIS dependency.
+# Kept here so tests can import them directly without QGIS bindings.
+# ---------------------------------------------------------------------------
+
+def distance_along_axis(obstacle_pt, der_pt, azimuth_deg: float) -> float:
+    """Return the signed distance (metres) from *der_pt* to *obstacle_pt*
+    projected onto the takeoff axis defined by *azimuth_deg* (0 = North)."""
+    az = radians(azimuth_deg)
+    dx = obstacle_pt.x() - der_pt.x()
+    dy = obstacle_pt.y() - der_pt.y()
+    return dx * sin(az) + dy * cos(az)
+
+
+def ocs_elevation_at_distance(d: float, z_der: float, climb_gradient: float) -> float:
+    """Return the OCS surface elevation (MSL) at horizontal distance *d* from the DER.
+
+    Points behind the DER (d < 0) are evaluated at *z_der*.
+    """
+    if d < 0:
+        return z_der
+    return z_der + d * climb_gradient

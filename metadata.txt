@@ -24,6 +24,8 @@ repository=https://github.com/FLYGHT7/tofpa/
 changelog=
  Version 0.0.1:
  - Beta release
+  Version 0.0.2:
+ - Adapted for QGIS4 and minor improvements
 
 hasProcessingProvider=no
 tags=ICAO,TOFPA,python,airports,aviation,runway,kmz,google earth
